@@ -16,29 +16,36 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
   const [inputValue, setInputValue] = useState('');
   const [suggestions, setSuggestions] = useState<Person[]>([]);
   const [isOpen, setIsOpen] = useState(false);
-  const [lastInput, setLastInput] = useState('');
-  const [, setSelectedPerson] = useState<Person | null>(null);
+  const [lastInput, setLastInput] = useState(''); // Зберігаємо попереднє значення для порівняння
+  const [, setSelectedPerson] = useState<Person | null>(null); // Переміщаємо вгору
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Створюємо debounce-функцію з інлайн-коллбеком, щоб уникнути проблем із залежностями
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleInputChange = useCallback(
     debounce((value: string) => {
+      // Ігноруємо фільтрацію, якщо текст складається лише з пробілів
+      if (value.trim() === '') {
+        setSuggestions([]); // Порожній або лише пробіли — скидаємо підказки
+        setLastInput(value);
+
+        return;
+      }
+
+      // Не фільтруємо, якщо текст не змінився
       if (value === lastInput) {
         return;
       }
 
       setLastInput(value);
 
-      if (value.trim() === '') {
-        setSuggestions([]); // Порожній інпут — показуємо всі люди, якщо сфокусовано
-      } else {
-        const filtered = people.filter(person =>
-          person.name.toLowerCase().includes(value.toLowerCase()),
-        );
+      const filtered = people.filter(person =>
+        person.name.toLowerCase().includes(value.trim().toLowerCase()),
+      );
 
-        setSuggestions(filtered.length > 0 ? filtered : []);
-      }
+      setSuggestions(filtered.length > 0 ? filtered : []);
     }, delay),
-    [people, delay, lastInput],
+    [people, delay],
   );
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,7 +111,7 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
           {suggestions.length > 0 ? (
             suggestions.map(person => (
               <div
-                key={person.slug}
+                key={`${person.name}-${person.born}`} // Використовуємо унікальну комбінацію name і born
                 className="dropdown-item"
                 data-cy="suggestion-item"
                 onClick={() => handleSelect(person)}
